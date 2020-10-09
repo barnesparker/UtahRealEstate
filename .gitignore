@@ -1,0 +1,8 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.csv
+SampleRealEstateDataCleaning.R
+data/SampleRealEstateRaw.csv
+UtahRealEstate.Rproj
