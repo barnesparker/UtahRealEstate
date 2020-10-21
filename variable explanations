@@ -1,0 +1,119 @@
+ACCOUNTNO, SERIAL_NO are the same thing.  Also called the parcel number.  This the main ID number for a parcel of land.
+
+ASMT_YR, is the year we are working on.  The assessment roll we are working on now is due May 2021, we are working on data for 2021.
+
+PROP_TYPE, property type.  Most are RS, meaning residential.  If they have more than two houses, or other unusual things, it will be called something else.
+
+  IMP_VAL, is the value of all the structures for a parcel, put on the assessment roll    in 2020
+
+  LAND_VAL, is the value of the land for the assessment roll in 2020
+
+RE_RES, current land value in database for the value of the the land up to the 1st acre
+
+RE_AGR, land value of land over the first acre.  This is the current value in the database, could change anytime and will change by May of 2021
+
+TOT_VAL, is the total assessed value on the parcel in the assessment roll of 2020.  This should equal IMP_VAL + LAND_VAL
+
+STATUS, A means its an actively taxed parcel
+
+TX_DIST, the taxing id number, largely based upon the school district and the city it is in.
+
+VAL_AREA, is a market area used for modeling, regardless of its city or tax district.  These are markets of complementary residential parcels.  This is one way a divide up the county for modeling
+
+PT, another Property Type term.  111 means single family residential
+
+SPT, special property type.  Generally, 111 means a typical home.  119 means its in a PUD (Planned Urban Development) a neighborhood with an HOA
+
+N_GRP, a part of a value area.  For example all Lehi is in VALAREA 101 but N_GRP may be a certain part of Lehi.
+
+LEA, a small area of parcels, could be just a couple of streets.  Basically an area with very similar parcels.
+
+ACREAGE, size of the land for the parcel as recorded in our database
+
+PL_ABST, you don't need to worry about this.
+
+PL_ACRES, number of acres for the parcel up to 1 acre
+
+PL_VALUE, current value of primary lot (land up to the 1st acre) as recorded in database
+
+PA_ABST, don't worry about this one.
+
+PA_AC, size of land after the first acre
+
+PA_VALUE, value currently in database for the land area above one acre
+
+CL_ABST, CL_TYPE, CL_VALUE, all relate to commercial property and you don't need to worry about these.
+
+IMPNO, for this file is always 1
+
+YRBLT, the year the primary house was built, as recorded in our database
+
+EFFAGE, the effective age of the house.  If was built in 1950 but totally updated in 2010, its effective age is about 20
+
+REMODYR, the year it appears the house was remodeled
+
+REMODPCT, the percent of the house that was remodeled.
+
+BLTASCODE, you can ignore this
+
+BLTASDESCRIPTION, the design of the house
+
+BLTASSTORIES, number of stories
+
+IMPEXTERIOR, the exterior finish of the house
+
+BLTASSF, same as appraisers call GLA (gross living area), the sq ft of the house - not including the basement
+
+BEDRMCNT, number of bedrooms, usually only in the GLA.  Not always accurate
+
+TOT_BATH, number of bathrooms
+
+BSMT_TOTAL, size in sf of basement as recorded in our database
+
+BSMT_FIN, size in sf of the amount of the basement that is finished
+
+BSMT_UNFIN, amount of basement that isn't finished
+
+BATH_2, number of 1/2 bathrooms (sink and a toilet)
+
+BATH_3, number of 3/4 bathrooms (sink, toilet and shower)
+
+BATH_4, number of full bathrooms (sink, toilet, and shower/tub)
+
+BATH_5, number of bath 5 (sink, toilet, tub and separate shower)
+
+KITCHENS, number of kitchens
+
+ATTGAR, sf of attached garage (attached to the side of the house)
+
+DETGAR, sf of the detached garage
+
+  RES_ABST, you can ignore this
+
+RES_RCNLD.  Based upon national construction cost averages, the cost this house would have cost to build it new, minus the depreciation using a straight line depreciation schedule  - of the primary structure.  
+
+RES_COSTRCN, Based upon national construction cost averages, the cost this house would have cost to build it new regardless of depreciation - of the primary structure.
+
+DSP_IMPABSTVAL,DSS_IMPABSTVAL, DSA_IMPABSTVAL, DSP_IMPABSTVAL, DSP_COSTRCN, DSS_COSTRCN, DSA_COSTRCN,  you can ignore these for now
+
+TOT_RCNLD, Based upon national construction cost averages, the cost this house would have cost to build it new, minus the depreciation using a straight line depreciation schedule of all structures on parcel
+
+TOT_RCNL,   Based upon national construction cost averages, the cost this house would have cost to build it new, of all structures on parcel
+
+NEW_PT, similar to PROP_TYPE
+
+SOLD_PRICE, if the parcel sold in the last 3 years, what was it sold price
+
+SOLD_DATE, date is was sold
+
+LIST_NO, the id number from the MLS... the multiple listing service that the real estate agents use
+
+PAID_CONCESSIONS, discount given to the buyer when the house was sold.  The adjusted sold price is SOLD_PRICE - PAID_CONCESSIONS, this is what the property really sold for
+
+YEAR_BUILT, as recorded on the MLS, when it was sold
+
+ACRES, size of parcel that was recorded on the MLS when it sold
+
+MLS_TOTAL_SQFT, size of house recorded on MLS when it sold
+
+PROP_CLASS, WORK_STATUS, you can ignore for now
