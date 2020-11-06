@@ -1,0 +1,234 @@
+---
+title: "Predicting Improved Value"
+author: "Parker Barnes"
+date: "10/26/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup}
+### load necessary libraries
+
+# for data wrangling/cleaning
+library(tidyverse)
+# for some helpful data exploration
+library(DataExplorer)
+# for imputation of some missing values
+library(mice)
+library(caret)
+```
+
+
+## Import Data
+```{r message=FALSE, warning=FALSE}
+# read in data
+filename <- "data/WholeCounty2020.csv"
+props <- read_csv(filename) %>% 
+  # filter props that don't have a sold price because we can't train or test a model with that data
+  filter(!is.na(SOLD_PRICE)) %>% 
+  # For our analysis, we are predicting improved value, so we will subtract land value and paid concessions from the sale transaction. We  will then remove those variables from our dataset, leaving just the improved value.
+  mutate(IMPROVED = SOLD_PRICE - PAID_CONCESSIONS - LAND_VAL)
+
+compare = props$SOLD_PRICE
+props <- props %>% 
+  select(-c(LAND_VAL, SOLD_PRICE, PAID_CONCESSIONS))
+```
+
+```{r}
+props <- props %>% 
+  select(-c(SERIAL_NO, ASMT_YR, STATUS, ACREAGE, PL_ABST, PL_ACRES, PA_ABST,
+            PA_AC, CL_ABST, CL_TYPE, CL_VALUE, IMPNO, BLTASCODE, RES_ABST,
+            DSP_IMPABSTVAL,DSS_IMPABSTVAL, DSA_IMPABSTVAL, DSP_IMPABSTVAL,
+            DSP_COSTRCN, DSS_COSTRCN, DSA_COSTRCN, LIST_NO, PROP_CLASS,
+            ACRES, WORK_STATUS, SOLD_DATE, VALAREA, IMP_VAL, PL_VALUE, TOT_VAL,
+            RE_RES, RE_AGR, RE_COM, PA_VALUE, PCTCOMPLETD, SALE_VALID, EFFAGE))
+```
+
+# Data Cleaning 
+
+## Missing Values
+In order to do our analysis, we must 'clean' the data. Part of that is dealing
+with missing (NA) values.
+```{r}
+# plot missing values
+# props %>% 
+#   select(where(~sum(is.na(.x)) > 0)) %>% 
+#   plot_missing()
+```
+
+Below, we will go through each of these variables that have missing values.
+
+For REMODPCT, we will assume that the missing values indicate that the property
+is not remodeled, so therefore a 0 will be imputed
+
+For BEDRMCNT, we will impute the median
+
+IMPCONDITIONTYPE had a row with the value '1' and so we will replace that with
+'Average', which was the mode (most common) of the values.
+
+REMODYR will be dealth with in the next code block.
+
+```{r}
+# replace some na/garbage values
+props <- props %>% 
+  # assume REMODPCT is 0 if it's missing
+  mutate(REMODPCT = replace_na(REMODPCT, 0.00),
+         # Assume number of stories in 1 if it's missing
+         BLTASSTORIES = replace_na(BLTASSTORIES, 1),
+         # Impute the mean of BEDRMCNT if it's missing
+         BEDRMCNT = replace_na(BEDRMCNT, median(BEDRMCNT, na.rm = T)),
+         # Some had '1' instead of a string, so we will call it average
+         IMPCONDITIONTYPE = if_else(IMPCONDITIONTYPE == 1, 'Average', IMPCONDITIONTYPE)
+  )
+```
+
+
+## Feature Engineering
+
+The following code will introduce new variables that will make our data more
+predictive.
+```{r}
+# create some variables
+props <- props %>% 
+  # indicator whether house has an attached garage
+  mutate(HAS_ATTGAR = if_else(ATTGAR > 0, 'Yes', 'No'),
+         # indicator whether house has a detached garage
+         HAS_DETGAR = if_else(DETGAR > 0, 'Yes', 'No'),
+         # indicator of whether house has basement
+         HAS_BSMT = if_else(BSMT_TOTAL > 0, 'Yes', 'No'),
+         # indicator of whether basement is finished
+         BSMT_ISFIN = if_else(BSMT_TOTAL > 0 & BSMT_TOTAL == BSMT_FIN, 'Yes', 'No'),
+         # percentage of basement completed
+         BSMT_PCTCOMP = if_else(BSMT_TOTAL > 0, BSMT_FIN / BSMT_TOTAL, 0),
+         # total bathrooms is the sum of all the sizes of bathrooms
+         TOT_BATH = BATH2 * .5 + BATH3 * .75 + BATH4 + BATH5 * 1.25,
+         # indicator whether house was remodeled
+         IS_REMOD = if_else(REMODPCT > 0, 'Yes', 'No'),
+         # Sqft per room
+         SF_ROOM = MLS_TOTAL_SQFT / BEDRMCNT,
+         # Create time since remodel intervals
+         TIME_REMOD = cut((2021 - REMODYR), 
+                   breaks=c(0, 5, 20, Inf), 
+                   labels=c('0-5','5-20','20+'),
+                   ordered_result = T),
+         # lump different levels into simpler levels
+         IMPQUALITY = fct_collapse(IMPQUALITY,
+                                   'Below Average' = c('Fair', 'Fair Plus'),
+                                   'Above Average' = c('Average Plus', 'Good',
+                                                       'Very Good', 'Good Plus',
+                                                       'Very Good Plus', 'Excellent')),
+         IMPCONDITIONTYPE = fct_collapse(IMPCONDITIONTYPE,
+                                         'Average' = c('Average', 'Agverage', 'Below Average',
+                                                       'Fair'),
+                                         'Above Average' = c('Good', 'Very Good',
+                                                             'Excellent')),
+         IMPEXTERIOR = fct_lump_min(IMPEXTERIOR, 250)  
+  )
+
+# We fix our TIME_REMOD variable to incorporate props that aren't remodelled
+props <- props %>% 
+  mutate(TIME_REMOD = fct_expand(TIME_REMOD, 'N/A')) %>% 
+  mutate(TIME_REMOD = replace_na(TIME_REMOD, 'N/A')) %>%
+  rowwise() %>% 
+  mutate(ACTUAL_AGE = 2021 - floor(mean(c(YRBLT, YEAR_BUILT)))
+)
+```
+
+
+
+Here we remove the variables we no longer need after our feature engineering
+```{r}
+props <- props %>% 
+  select(-c(REMODYR, BATH2, BATH3, BATH4, BATH5, YRBLT, YEAR_BUILT, BSMT_TOTAL,
+            BSMT_FIN, BSMT_UNFIN, BLTASDESCRIPTION, PT, SPT, NEW_PT))
+```
+
+We need to convert certain variables to factor so that our analysis is done correctly
+
+```{r}
+props <- props %>% 
+  mutate(across(c(PROP_TYPE, TX_DIST, N_GRP, LEA, IMPEXTERIOR, 
+                  HAS_ATTGAR, HAS_DETGAR, HAS_BSMT, BSMT_ISFIN, IS_REMOD, 
+                  IMPQUALITY, IMPCONDITIONTYPE, BLTASSTORIES), as_factor))
+```
+
+Now let's take a look at some of our factors. We will make tables showing the value counts of several of the variables to see how balanced they are
+```{r}
+# props$PROP_TYPE %>% table()
+# props$TX_DIST %>% table()
+# props$PT %>% table()
+# props$SPT %>% table()
+# props$N_GRP %>% table()
+# props$LEA %>% table()
+# props$blt
+# props$BLTASSTORIES %>% table()
+# props %>% 
+#   ggplot(aes(x = IMPEXTERIOR)) +
+#   geom_bar() +
+#   coord_flip()
+# 
+# props %>% ggplot(aes(x = reorder(IMPEXTERIOR, -IMPROVED), y = IMPROVED)) +
+#   stat_summary(fun.data=mean_sdl, geom="bar") +
+#   coord_flip()
+```
+
+The majority are type 'RS', which is a basic Residential. Because of this, we will lump all other values into an 'other' category
+
+```{r}
+clean.props <- props %>% 
+  mutate(PROP_TYPE = fct_collapse(PROP_TYPE, 'Test' = c('RS', 'RSOB')))
+         # TX_DIST = fct_lump_prop(TX_DIST, .015),
+         # LEA = fct_lump_min(LEA, 20),
+         # N_GRP = fct_lump_min(N_GRP, 40)
+```
+
+
+# Data Visualization
+
+First of all, we want to see what the distribution of the improved values looks like
+
+```{r}
+clean.props %>% 
+  ggplot(aes(x = IMPROVED)) +
+  geom_histogram()
+```
+
+It looks like we have some outliers. To remedy those, we will perform a log transformation on our data. This will improve our predictions.
+
+
+
+```{r}
+clean.props <- clean.props %>% 
+  mutate(LOG_IMPROVED = log(IMPROVED))
+
+
+clean.props %>% 
+  ggplot(aes(x = LOG_IMPROVED)) +
+  geom_histogram()
+```
+
+```{r}
+clean.props <- clean.props %>% filter(complete.cases(.))
+trans.01 <- preProcess(x=clean.props %>% select(-c(ACCOUNTNO, LOG_IMPROVED, IMPROVED)),
+                       method='range', rangeBounds = c(0,1))
+clean.props01 <- predict(trans.01, newdata=clean.props) %>% 
+  drop_na() %>% 
+  filter(IMPROVED > 0)
+lm(LOG_IMPROVED~., data = clean.props %>% select(-ACCOUNTNO))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

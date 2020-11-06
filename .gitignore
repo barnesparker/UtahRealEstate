@@ -6,3 +6,11 @@
 SampleRealEstateDataCleaning.R
 data/SampleRealEstateRaw.csv
 UtahRealEstate.Rproj
+*.pdf
+*.log
+*.out
+*.aux
+ImprovedValueReport.html
+ImprovedValueReport.tex
+SampleRealEstateDataCleaning.spin.Rmd
+SampleRealEstateDataCleaning.spin.R
